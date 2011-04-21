@@ -55,9 +55,6 @@ def aos2ip(aos):
   ip = str(ip&0xFF)+'.'+str((ip&0xFF00)>>8)+'.'+str((ip&0xFF0000)>>16)+'.'+str((ip&0xFF000000)>>24)
   return ip
 
-
-loadBlacklist()
-loadFavlist()
 def loadLists(blacklist=True,favlist=True):
     if blacklist:
         try:
@@ -92,13 +89,15 @@ def loadLists(blacklist=True,favlist=True):
 loadLists()
 
 class Update(threading.Thread):
-     def __init__(self, list, statusbar,checks):
+     def __init__(self, list, statusbar, button, checks):
          super(Update, self).__init__()
          self.list = list
          self.statusbar = statusbar
+         self.button = button
          self.checks = [c.get_label() for c in checks]
      def run(self):
         self.list.clear()
+        self.button.set_sensitive(False)
         global blacklist
         try:
             servers = []
@@ -146,6 +145,7 @@ class Update(threading.Thread):
             gtk.gdk.threads_leave()
 
         finally:
+             self.button.set_sensitive(True)
              pass
 
 class Base:
@@ -217,7 +217,7 @@ class Base:
         return True
     
     def refresh(self,widget=None,data=None):
-        t = Update(self.liststore,self.statusbar,[r for r in self.checks if r.get_active()])
+        t = Update(self.liststore,self.statusbar,self.refreshB,[r for r in self.checks if r.get_active()])
         t.start()
         return True
     
