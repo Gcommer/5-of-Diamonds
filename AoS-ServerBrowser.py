@@ -9,6 +9,7 @@ import webbrowser
 import os,sys
 
 #It's safe to assume we're using a Linux system if importing _winreg fails
+global onLinux
 try:
     import _winreg
     onLinux = False
@@ -117,8 +118,8 @@ class Update(threading.Thread):
         global blacklist
         try:
             servers = []
-            page = urllib.urlopen('http://ace-spades.com/').readlines()
-            s = page[page.index("<pre>\n")+2:-2]
+            page = urllib.urlopen('http://ace-spades.com/?page_id=5').readlines()
+            s = page[page.index("<pre>\n")+2:page.find("</pre>\n")]
             for i in s:
                 try:
                     ratio = i[0:5].split('/')
@@ -128,9 +129,14 @@ class Update(threading.Thread):
                     fav = url in favlist
                     ip = aos2ip(url)
                     try:
-                        pipe = os.popen('ping %s -n 1 -w 100' % (ip))
-                        ping = int(pipe.read().split('\n')[2].rpartition('time=')[2].rpartition('ms')[0])
-                        pipe.stdin.close()
+                        if onLinux:
+                            pipe = os.popen('ping %s -c 1 -w 1' % (ip))
+                            ping = int(pipe.read().split('\n')[2].rpartition('time=')[2].rpartition(' ms')[0])
+                            pipe.stdin.close()
+                        else:
+                            pipe = os.popen('ping %s -n 1 -w 100' % (ip))
+                            ping = int(pipe.read().split('\n')[2].rpartition('time=')[2].rpartition('ms')[0])
+                            pipe.stdin.close()
                     except:
                         ping = int(i[6:i.find('<')])
                     name = filter(lambda x: isascii(x),i[i.find('>')+1:i.rfind('<')])
@@ -158,7 +164,7 @@ class Update(threading.Thread):
             self.statusbar.push(0,"Updated successfully")
             gtk.gdk.threads_leave()
             return True
-        except SomeException,e :#When it can't update the statusbar because it is dead, sys.exit()
+        except Exception, e :#When it can't update the statusbar because it is dead, sys.exit()
             sys.exit()
         except Exception, e:
             gtk.gdk.threads_enter()
@@ -359,13 +365,9 @@ class Base:
                     f.close()
                 except Exception,e:
                     self.statusbar.push(0,'Failed to write favourites file: %s' % (str(e)))
-            elif event.type == gtk.gdk._2BUTTON_PRESS:
+            elif (event.type == gtk.gdk._2BUTTON_PRESS) or ( event.button == 2 and mouse_fix:):
                 #Set the background colour to light green on click
                 #Doesn't reset the previously played row until another refresh
-                self.last_played = model[path][1]
-                model[path][7] ='#BFFFB8'
-                self.joinGame(model[path][1])
-            elif event.button == 2 and mouse_fix:
                 self.last_played = model[path][1]
                 model[path][7] ='#BFFFB8'
                 self.joinGame(model[path][1])
